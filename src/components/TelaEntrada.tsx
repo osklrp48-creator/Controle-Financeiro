@@ -1,14 +1,73 @@
 import { useState } from "react";
-import type { Conta } from "../storage/contas";
+import { SENHA_MINIMA, validarCadastro, type Conta } from "../storage/contas";
+import { SenhaInput } from "./SenhaInput";
 
+/** Todas as ações devolvem uma mensagem de erro, ou null se deu certo. */
 type Props = {
-  contas: Conta[];
-  onEntrar: (conta: Conta, senha: string) => Promise<string | null>;
-  onCriar: (nome: string, senha: string | undefined) => Promise<string | null>;
+  semCadastro: Conta[];
+  onEntrar: (nome: string, sobrenome: string, senha: string) => Promise<string | null>;
+  onCadastrar: (nome: string, sobrenome: string, senha: string, contaAntiga?: Conta) => Promise<string | null>;
 };
 
-function NovaConta({ onCriar, onCancelar }: { onCriar: Props["onCriar"]; onCancelar?: () => void }) {
+function Login({ onEntrar, onIrCadastro }: { onEntrar: Props["onEntrar"]; onIrCadastro: () => void }) {
   const [nome, setNome] = useState("");
+  const [sobrenome, setSobrenome] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  const enviar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEnviando(true);
+    setErro(await onEntrar(nome, sobrenome, senha));
+    setEnviando(false);
+  };
+
+  return (
+    <form className="cartao formulario" onSubmit={enviar}>
+      <header>
+        <h2>Entrar</h2>
+      </header>
+      <div className="linha">
+        <label>
+          Nome
+          <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="given-name" autoFocus />
+        </label>
+        <label>
+          Sobrenome
+          <input value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} autoComplete="family-name" />
+        </label>
+      </div>
+      <SenhaInput rotulo="Senha" valor={senha} onChange={setSenha} autoComplete="current-password" />
+      {erro && (
+        <p className="situacao ruim" role="alert">
+          {erro}
+        </p>
+      )}
+      <button className="primario" disabled={!nome.trim() || !sobrenome.trim() || !senha || enviando}>
+        Entrar
+      </button>
+      <p className="alternativa">
+        Ainda não tem conta?{" "}
+        <button type="button" className="link" onClick={onIrCadastro}>
+          Cadastre-se
+        </button>
+      </p>
+    </form>
+  );
+}
+
+function Cadastro({
+  contaAntiga,
+  onCadastrar,
+  onVoltar,
+}: {
+  contaAntiga?: Conta;
+  onCadastrar: Props["onCadastrar"];
+  onVoltar: () => void;
+}) {
+  const [nome, setNome] = useState("");
+  const [sobrenome, setSobrenome] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -16,64 +75,60 @@ function NovaConta({ onCriar, onCancelar }: { onCriar: Props["onCriar"]; onCance
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (senha !== confirmacao) return setErro("As senhas não conferem.");
+    const invalido = validarCadastro(nome, sobrenome, senha, confirmacao);
+    if (invalido) return setErro(invalido);
     setEnviando(true);
-    setErro(await onCriar(nome, senha || undefined));
+    setErro(await onCadastrar(nome, sobrenome, senha, contaAntiga));
     setEnviando(false);
   };
 
   return (
     <form className="cartao formulario" onSubmit={enviar}>
       <header>
-        <h2>Nova conta</h2>
+        <h2>{contaAntiga ? "Cadastrar dados existentes" : "Criar conta"}</h2>
       </header>
-      <label>
-        Nome
-        <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Ana" autoFocus autoComplete="username" />
-      </label>
+      {contaAntiga && (
+        <p className="nota">
+          Os lançamentos de <b>{contaAntiga.nome}</b> serão mantidos e passam a ser acessados com o nome, sobrenome e senha
+          abaixo.
+        </p>
+      )}
       <div className="linha">
         <label>
-          Senha (opcional)
-          <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="new-password" />
+          Nome
+          <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="given-name" autoFocus />
         </label>
         <label>
-          Repita a senha
-          <input type="password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} autoComplete="new-password" />
+          Sobrenome
+          <input value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} autoComplete="family-name" />
         </label>
       </div>
-      <p className="nota">Cada conta tem seus próprios meses, parcelamentos e ajustes. Os dados ficam só neste aparelho.</p>
-      {erro && <p className="situacao ruim">{erro}</p>}
-      <div className="acoes">
-        {onCancelar && (
-          <button type="button" onClick={onCancelar}>
-            Cancelar
-          </button>
-        )}
-        <button className="primario" disabled={!nome.trim() || enviando}>
-          Criar conta
+      <SenhaInput rotulo="Senha" valor={senha} onChange={setSenha} autoComplete="new-password" />
+      <SenhaInput rotulo="Confirmação de senha" valor={confirmacao} onChange={setConfirmacao} autoComplete="new-password" />
+      <p className="nota">
+        A senha precisa ter pelo menos {SENHA_MINIMA} caracteres. Cada conta tem seus próprios dados, que ficam só neste
+        aparelho.
+      </p>
+      {confirmacao && senha !== confirmacao && <p className="situacao atencao">A confirmação ainda não confere.</p>}
+      {erro && (
+        <p className="situacao ruim" role="alert">
+          {erro}
+        </p>
+      )}
+      <button className="primario" disabled={enviando}>
+        {contaAntiga ? "Cadastrar e entrar" : "Criar conta"}
+      </button>
+      <p className="alternativa">
+        <button type="button" className="link" onClick={onVoltar}>
+          ← Voltar para o login
         </button>
-      </div>
+      </p>
     </form>
   );
 }
 
-export function TelaEntrada({ contas, onEntrar, onCriar }: Props) {
-  const [criando, setCriando] = useState(contas.length === 0);
-  const [escolhida, setEscolhida] = useState<Conta | null>(null);
-  const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
-
-  const escolher = async (c: Conta) => {
-    setErro(null);
-    setSenha("");
-    if (c.senha) setEscolhida(c);
-    else setErro(await onEntrar(c, ""));
-  };
-
-  const entrarComSenha = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (escolhida) setErro(await onEntrar(escolhida, senha));
-  };
+export function TelaEntrada({ semCadastro, onEntrar, onCadastrar }: Props) {
+  const [tela, setTela] = useState<{ modo: "login" } | { modo: "cadastro"; contaAntiga?: Conta }>({ modo: "login" });
 
   return (
     <div className="app entrada">
@@ -81,45 +136,29 @@ export function TelaEntrada({ contas, onEntrar, onCriar }: Props) {
         <h1>Orçamento</h1>
       </header>
       <main>
-        {criando ? (
-          <NovaConta onCriar={onCriar} onCancelar={contas.length ? () => setCriando(false) : undefined} />
-        ) : (
-          <section className="cartao">
-            <header>
-              <h2>Escolha a conta</h2>
-            </header>
-            <ul className="lista-contas">
-              {contas.map((c) => (
-                <li key={c.id}>
-                  <button className={escolhida?.id === c.id ? "ativa" : undefined} onClick={() => escolher(c)}>
-                    <span className="avatar" aria-hidden>
-                      {c.nome.slice(0, 1).toUpperCase()}
-                    </span>
-                    <span className="nome-conta">{c.nome}</span>
-                    {c.senha && <span title="Protegida por senha">🔒</span>}
+        {tela.modo === "login" ? (
+          <>
+            <Login onEntrar={onEntrar} onIrCadastro={() => setTela({ modo: "cadastro" })} />
+            {semCadastro.length > 0 && (
+              <section className="cartao aviso-antigo">
+                <p>
+                  Há lançamentos salvos neste aparelho antes do cadastro. Crie o acesso para continuar usando esses dados:
+                </p>
+                {semCadastro.map((c) => (
+                  <button key={c.id} onClick={() => setTela({ modo: "cadastro", contaAntiga: c })}>
+                    Cadastrar “{c.nome}”
                   </button>
-                  {escolhida?.id === c.id && (
-                    <form className="senha-conta" onSubmit={entrarComSenha}>
-                      <input
-                        type="password"
-                        aria-label={`Senha de ${c.nome}`}
-                        placeholder="Senha"
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                        autoComplete="current-password"
-                        autoFocus
-                      />
-                      <button className="primario">Entrar</button>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {erro && <p className="situacao ruim">{erro}</p>}
-            <button className="adicionar" onClick={() => setCriando(true)}>
-              + Nova conta
-            </button>
-          </section>
+                ))}
+              </section>
+            )}
+          </>
+        ) : (
+          <Cadastro
+            key={tela.contaAntiga?.id ?? "nova"}
+            contaAntiga={tela.contaAntiga}
+            onCadastrar={onCadastrar}
+            onVoltar={() => setTela({ modo: "login" })}
+          />
         )}
       </main>
     </div>

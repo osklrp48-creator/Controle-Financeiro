@@ -78,12 +78,18 @@ As escritas recebem só a chave; a implementação lê o valor atual do estado p
 
 ## Contas
 
-- O app abre numa tela para escolher ou criar uma **conta**. Cada conta tem seus próprios meses,
-  parcelamentos e ajustes, guardados num banco IndexedDB separado (`orcamento-<id>`).
-- A senha é opcional e fica guardada como hash PBKDF2. Ela só controla o acesso pelo app: os dados
-  **não** são criptografados no navegador e ficam apenas no aparelho, sem sincronizar entre aparelhos.
-- A conta aberta fica lembrada no aparelho até tocar em **Trocar de conta** (em Ajustes).
-- Os dados de antes das contas viram automaticamente a conta **Minha conta**.
+- O app abre na **página de login**: nome, sobrenome e senha. A lista de contas não é mostrada.
+  O login não diferencia maiúsculas, acentos nem espaços extras.
+- **Cadastro:** nome, sobrenome, senha e confirmação de senha (mínimo de 4 caracteres). Não pode
+  haver duas contas com o mesmo nome completo no aparelho.
+- Todos os campos de senha têm um botão para **mostrar/ocultar** o que foi digitado.
+- Cada conta tem seus próprios meses, parcelamentos e ajustes, num banco IndexedDB separado
+  (`orcamento-<id>`). A conta aberta fica lembrada até tocar em **Sair** (em Ajustes), onde também
+  dá para alterar a senha e excluir a conta.
+- A senha fica guardada como hash PBKDF2 e só controla o acesso pelo app: os dados **não** são
+  criptografados no navegador e ficam apenas no aparelho, sem sincronizar entre aparelhos.
+- Dados de versões anteriores (sem cadastro) aparecem na página de login com o botão
+  **Cadastrar**, que dá nome, sobrenome e senha a eles sem perder nada.
 
 ## Retenção de 13 meses
 

@@ -5,7 +5,7 @@ import { TelaMes } from "./components/TelaMes";
 import { TelaParcelas } from "./components/TelaParcelas";
 import { primeiroMesGuardado } from "./domain/calculos";
 import { mesAtual, nomeMes, somarMeses } from "./domain/meses";
-import type { Conta } from "./storage/contas";
+import { nomeCompleto, type Conta } from "./storage/contas";
 import { useOrcamento } from "./useOrcamento";
 
 const ABAS = [
@@ -20,7 +20,7 @@ export type AcoesConta = {
   conta: Conta;
   onSair: () => void;
   /** Devolvem uma mensagem de erro, ou null se deu certo. */
-  onAlterarSenha: (senhaAtual: string, nova: string | undefined) => Promise<string | null>;
+  onAlterarSenha: (senhaAtual: string, nova: string) => Promise<string | null>;
   onExcluirConta: (senha: string) => Promise<string | null>;
 };
 
@@ -42,7 +42,7 @@ export function App(props: AcoesConta) {
         <div className="marca">
           <h1>Orçamento</h1>
           <button className="conta-atual" onClick={() => setAba("ajustes")} title="Conta">
-            {conta.nome}
+            {nomeCompleto(conta)}
           </button>
         </div>
         <nav className="navegador-mes" aria-label="Mês">

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { App } from "./App";
 import { TelaEntrada } from "./components/TelaEntrada";
 import { novoId } from "./formato";
-import { contaDaSessao, criarRepositorioContas, salvarSessao, senhaConfere, type Conta } from "./storage/contas";
+import { contaDaSessao, criarRepositorioContas, salvarSessao, type Conta } from "./storage/contas";
 
-/** Escolha/criação de conta; com uma conta aberta, mostra o app com os dados dela. */
+const mensagem = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** Página de login/cadastro; com uma conta aberta, mostra o app com os dados dela. */
 export function Raiz() {
   const repo = useMemo(() => criarRepositorioContas(), []);
   const [contas, setContas] = useState<Conta[] | null>(null);
@@ -16,8 +18,9 @@ export function Raiz() {
       .listar()
       .then((lista) => {
         setContas(lista);
-        const sessao = contaDaSessao();
-        setAtiva(lista.find((c) => c.id === sessao) ?? null);
+        // Só reabre sozinha uma conta com cadastro completo (com senha).
+        const sessao = lista.find((c) => c.id === contaDaSessao() && c.senha);
+        setAtiva(sessao ?? null);
       })
       .catch((e) => setErro(`Não foi possível abrir as contas: ${e}`));
   }, [repo]);
@@ -33,20 +36,25 @@ export function Raiz() {
   if (!ativa) {
     return (
       <TelaEntrada
-        contas={contas}
-        onEntrar={async (c, senha) => {
-          if (!(await senhaConfere(c, senha))) return "Senha incorreta.";
-          abrir(c);
-          return null;
-        }}
-        onCriar={async (nome, senha) => {
+        semCadastro={contas.filter((c) => !c.senha)}
+        onEntrar={async (nome, sobrenome, senha) => {
           try {
-            const c = await repo.criar(nome, senha, novoId());
-            setContas([...contas, c]);
+            abrir(await repo.entrar(nome, sobrenome, senha));
+            return null;
+          } catch (e) {
+            return mensagem(e);
+          }
+        }}
+        onCadastrar={async (nome, sobrenome, senha, contaAntiga) => {
+          try {
+            const c = contaAntiga
+              ? await repo.cadastrarExistente(contaAntiga.id, nome, sobrenome, senha)
+              : await repo.cadastrar(nome, sobrenome, senha, novoId());
+            setContas([...contas.filter((x) => x.id !== c.id), c]);
             abrir(c);
             return null;
           } catch (e) {
-            return (e as Error).message;
+            return mensagem(e);
           }
         }}
       />
@@ -58,19 +66,25 @@ export function Raiz() {
       key={ativa.id}
       conta={ativa}
       onSair={() => abrir(null)}
-      onAlterarSenha={async (senhaAtual, nova) => {
-        if (!(await senhaConfere(ativa, senhaAtual))) return "Senha atual incorreta.";
-        const c = await repo.alterarSenha(ativa.id, nova);
-        setContas(contas.map((x) => (x.id === c.id ? c : x)));
-        setAtiva(c);
-        return null;
+      onAlterarSenha={async (atual, nova) => {
+        try {
+          const c = await repo.alterarSenha(ativa.id, atual, nova);
+          setContas(contas.map((x) => (x.id === c.id ? c : x)));
+          setAtiva(c);
+          return null;
+        } catch (e) {
+          return mensagem(e);
+        }
       }}
       onExcluirConta={async (senha) => {
-        if (!(await senhaConfere(ativa, senha))) return "Senha incorreta.";
-        await repo.excluir(ativa.id);
-        setContas(contas.filter((x) => x.id !== ativa.id));
-        abrir(null);
-        return null;
+        try {
+          await repo.excluir(ativa.id, senha);
+          setContas(contas.filter((x) => x.id !== ativa.id));
+          abrir(null);
+          return null;
+        } catch (e) {
+          return mensagem(e);
+        }
       }}
     />
   );

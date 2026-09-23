@@ -823,3 +823,57 @@ button,
   border-radius: 10px;
   padding: 9px 10px;
 }
+
+.campo-senha {
+  position: relative;
+  display: flex;
+}
+.campo-senha input {
+  flex: 1;
+  padding-right: 44px !important;
+}
+.ver-senha {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto-2);
+  display: grid;
+  place-items: center;
+}
+.ver-senha svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ver-senha[aria-pressed="true"] {
+  color: var(--primaria);
+}
+.alternativa {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--texto-2);
+}
+.alternativa .link {
+  font-size: 14px;
+}
+.aviso-antigo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+.aviso-antigo p {
+  margin: 0;
+  color: var(--texto-2);
+}
