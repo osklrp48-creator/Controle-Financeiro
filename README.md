@@ -72,6 +72,25 @@ As escritas recebem só a chave; a implementação lê o valor atual do estado p
 - **Novo mês:** copia rendas e itens do mês cadastrado mais recente anterior a ele. Só itens
   marcados como **fixos** (↻) levam o valor; os demais começam sem valor. Se não houver mês anterior,
   começa com os itens sugeridos e uma renda "Salário".
+- **Criação automática:** ao abrir o app ou navegar para um mês que ainda não existe, ele é criado
+  sozinho quando já há um mês anterior cadastrado (ou, no primeiro uso, quando é o mês atual).
+  Meses antes do primeiro cadastrado e meses excluídos na sessão continuam com o botão "Criar".
+
+## Contas
+
+- O app abre numa tela para escolher ou criar uma **conta**. Cada conta tem seus próprios meses,
+  parcelamentos e ajustes, guardados num banco IndexedDB separado (`orcamento-<id>`).
+- A senha é opcional e fica guardada como hash PBKDF2. Ela só controla o acesso pelo app: os dados
+  **não** são criptografados no navegador e ficam apenas no aparelho, sem sincronizar entre aparelhos.
+- A conta aberta fica lembrada no aparelho até tocar em **Trocar de conta** (em Ajustes).
+- Os dados de antes das contas viram automaticamente a conta **Minha conta**.
+
+## Retenção de 13 meses
+
+Para o app não ficar pesado, só ficam guardados o mês atual e os **12 anteriores** (e os meses
+futuros). Ao abrir uma conta, meses mais antigos são apagados, assim como parcelamentos que
+terminaram antes desse período. Não dá para navegar nem criar meses antes do limite. Para manter
+o histórico completo, exporte um backup antes.
 
 ## Backup
 

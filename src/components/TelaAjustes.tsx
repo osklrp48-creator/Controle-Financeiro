@@ -4,7 +4,96 @@ import { CATEGORIAS, configPadrao, CAT_KEYS } from "../domain/categorias";
 import { mesValido, nomeMes } from "../domain/meses";
 import type { Config, Dados, TipoCat } from "../domain/types";
 import { lerValor, pct } from "../formato";
+import type { AcoesConta } from "../App";
 import type { Orcamento } from "../useOrcamento";
+
+function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesConta) {
+  const [modo, setModo] = useState<"nada" | "senha" | "excluir">("nada");
+  const [atual, setAtual] = useState("");
+  const [nova, setNova] = useState("");
+  const [msg, setMsg] = useState<{ texto: string; ok: boolean } | null>(null);
+
+  const trocar = (m: typeof modo) => {
+    setModo(m);
+    setAtual("");
+    setNova("");
+    setMsg(null);
+  };
+
+  const salvarSenha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const erro = await onAlterarSenha(atual, nova || undefined);
+    if (erro) return setMsg({ texto: erro, ok: false });
+    trocar("nada");
+    setMsg({ texto: nova ? "Senha alterada." : "Senha removida.", ok: true });
+  };
+
+  const excluir = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirm(`Excluir a conta "${conta.nome}" e TODOS os dados dela? Isso não pode ser desfeito.`)) return;
+    const erro = await onExcluirConta(atual);
+    if (erro) setMsg({ texto: erro, ok: false });
+  };
+
+  return (
+    <section className="cartao">
+      <header>
+        <h2>
+          Conta <small>{conta.nome}</small>
+        </h2>
+        <button onClick={onSair}>Trocar de conta</button>
+      </header>
+      {msg && <p className={`situacao ${msg.ok ? "ok" : "ruim"}`}>{msg.texto}</p>}
+      {modo === "nada" && (
+        <div className="acoes">
+          <button onClick={() => trocar("senha")}>{conta.senha ? "Alterar senha" : "Definir senha"}</button>
+          <button className="perigo" onClick={() => trocar("excluir")}>
+            Excluir conta
+          </button>
+        </div>
+      )}
+      {modo === "senha" && (
+        <form className="formulario" onSubmit={salvarSenha}>
+          {conta.senha && (
+            <label>
+              Senha atual
+              <input type="password" value={atual} onChange={(e) => setAtual(e.target.value)} autoComplete="current-password" />
+            </label>
+          )}
+          <label>
+            Nova senha {conta.senha && "(deixe em branco para remover)"}
+            <input type="password" value={nova} onChange={(e) => setNova(e.target.value)} autoComplete="new-password" />
+          </label>
+          <div className="acoes">
+            <button type="button" onClick={() => trocar("nada")}>
+              Cancelar
+            </button>
+            <button className="primario" disabled={!conta.senha && !nova}>
+              Salvar senha
+            </button>
+          </div>
+        </form>
+      )}
+      {modo === "excluir" && (
+        <form className="formulario" onSubmit={excluir}>
+          <p className="nota">Apaga a conta e todos os meses, parcelamentos e ajustes dela neste aparelho.</p>
+          {conta.senha && (
+            <label>
+              Senha da conta
+              <input type="password" value={atual} onChange={(e) => setAtual(e.target.value)} autoComplete="current-password" />
+            </label>
+          )}
+          <div className="acoes">
+            <button type="button" onClick={() => trocar("nada")}>
+              Cancelar
+            </button>
+            <button className="perigo">Excluir conta</button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
 
 function validarBackup(x: unknown): x is Dados {
   const d = x as Dados;
@@ -18,7 +107,9 @@ function validarBackup(x: unknown): x is Dados {
   );
 }
 
-export function TelaAjustes({ dados, mesKey, orc }: { dados: Dados; mesKey: string; orc: Orcamento }) {
+type Props = { dados: Dados; mesKey: string; orc: Orcamento; contaAcoes: AcoesConta };
+
+export function TelaAjustes({ dados, mesKey, orc, contaAcoes }: Props) {
   const [rascunho, setRascunho] = useState<Config>(dados.config);
   const [txt, setTxt] = useState<Record<string, string>>({});
   useEffect(() => setRascunho(dados.config), [dados.config]);
@@ -54,6 +145,7 @@ export function TelaAjustes({ dados, mesKey, orc }: { dados: Dados; mesKey: stri
 
   return (
     <>
+      <SecaoConta {...contaAcoes} />
       <section className="cartao">
         <header>
           <h2>Distribuição da renda</h2>
@@ -116,7 +208,7 @@ export function TelaAjustes({ dados, mesKey, orc }: { dados: Dados; mesKey: stri
         <header>
           <h2>Backup</h2>
         </header>
-        <p className="nota">Os dados ficam só neste aparelho. Exporte um backup de vez em quando.</p>
+        <p className="nota">Os dados desta conta ficam só neste aparelho, e só os últimos 13 meses são guardados. Exporte um backup de vez em quando.</p>
         <div className="acoes">
           <button onClick={exportar}>Exportar JSON</button>
           <label className="botao">
