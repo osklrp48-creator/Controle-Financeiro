@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { configPadrao, CAT_KEYS } from "./categorias";
 import {
   criarMes,
+  deveCriarAutomaticamente,
   evolucao,
   mesAPartirDe,
   mesVazio,
@@ -197,6 +198,27 @@ describe("criação de mês", () => {
     };
     expect(criarMes(dados, "2026-05", id).rendas[0].nome).toBe("Recente");
     expect(criarMes({ ...dados, meses: {} }, "2026-05", id).rendas[0].nome).toBe("Salário");
+  });
+});
+
+describe("criação automática de mês", () => {
+  const m = () => mesCom([]);
+
+  it("cria meses seguintes a um mês cadastrado", () => {
+    const meses = { "2026-09": m() };
+    expect(deveCriarAutomaticamente(meses, "2026-10", "2026-09")).toBe(true);
+    expect(deveCriarAutomaticamente(meses, "2027-03", "2026-09")).toBe(true);
+  });
+  it("não recria mês existente", () => {
+    expect(deveCriarAutomaticamente({ "2026-09": m() }, "2026-09", "2026-09")).toBe(false);
+  });
+  it("não cria meses anteriores ao primeiro cadastrado", () => {
+    expect(deveCriarAutomaticamente({ "2026-09": m() }, "2026-08", "2026-09")).toBe(false);
+  });
+  it("no primeiro uso cria só o mês atual", () => {
+    expect(deveCriarAutomaticamente({}, "2026-09", "2026-09")).toBe(true);
+    expect(deveCriarAutomaticamente({}, "2026-10", "2026-09")).toBe(false);
+    expect(deveCriarAutomaticamente({}, "2026-08", "2026-09")).toBe(false);
   });
 });
 

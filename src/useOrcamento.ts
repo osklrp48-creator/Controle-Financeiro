@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { criarMes as gerarMes } from "./domain/calculos";
+import { criarMes as gerarMes, deveCriarAutomaticamente } from "./domain/calculos";
+import { mesAtual } from "./domain/meses";
 import type { Config, Dados, Mes, Parcelamento } from "./domain/types";
 import { novoId } from "./formato";
 import { createIdbStorage } from "./storage/idbStorage";
@@ -10,6 +11,8 @@ export function useOrcamento() {
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const storage = useMemo(() => createIdbStorage(() => ref.current!), []);
+  /** Meses excluídos nesta sessão: não são recriados automaticamente ao continuar na tela. */
+  const excluidos = useRef(new Set<string>());
 
   useEffect(() => {
     storage
@@ -32,6 +35,13 @@ export function useOrcamento() {
 
   const atual = () => ref.current!;
 
+  const criarMes = (key: string) => {
+    const d = atual();
+    if (d.meses[key]) return;
+    excluidos.current.delete(key);
+    commit({ ...d, meses: { ...d.meses, [key]: gerarMes(d, key, novoId) } }, (s) => s.saveMonth(key));
+  };
+
   return {
     dados,
     erro,
@@ -42,12 +52,17 @@ export function useOrcamento() {
       commit({ ...d, meses: { ...d.meses, [key]: fn(d.meses[key]) } }, (s) => s.saveMonth(key));
     },
 
-    criarMes(key: string) {
+    criarMes,
+
+    /** Cria o mês sozinho quando a regra permite (ver `deveCriarAutomaticamente`). */
+    criarMesAutomatico(key: string) {
       const d = atual();
-      commit({ ...d, meses: { ...d.meses, [key]: gerarMes(d, key, novoId) } }, (s) => s.saveMonth(key));
+      if (!d || excluidos.current.has(key) || !deveCriarAutomaticamente(d.meses, key, mesAtual())) return;
+      criarMes(key);
     },
 
     excluirMes(key: string) {
+      excluidos.current.add(key);
       const d = atual();
       const meses = { ...d.meses };
       delete meses[key];

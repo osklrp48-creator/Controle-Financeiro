@@ -169,6 +169,19 @@ export function mesAnteriorExistente(meses: Dados["meses"], mesKey: string): str
   return anteriores.length ? anteriores[anteriores.length - 1] : null;
 }
 
+/**
+ * Um mês é criado sozinho, sem o usuário apertar botão, quando ainda não existe e:
+ * - já há um mês anterior cadastrado para servir de base (meses seguintes), ou
+ * - é o primeiro uso (nenhum mês cadastrado) e o mês é o atual.
+ * Meses anteriores ao primeiro cadastrado continuam exigindo o botão "Criar",
+ * para que navegar para trás não encha o histórico de meses vazios.
+ */
+export function deveCriarAutomaticamente(meses: Dados["meses"], mesKey: string, atual: string): boolean {
+  if (meses[mesKey]) return false;
+  if (mesAnteriorExistente(meses, mesKey)) return true;
+  return Object.keys(meses).length === 0 && mesKey === atual;
+}
+
 export function criarMes(dados: Dados, mesKey: string, novoId: GeradorId): Mes {
   const base = mesAnteriorExistente(dados.meses, mesKey);
   return base ? mesAPartirDe(dados.meses[base], novoId) : mesVazio(novoId);

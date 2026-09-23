@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Painel } from "./components/Painel";
 import { TelaAjustes } from "./components/TelaAjustes";
 import { TelaMes } from "./components/TelaMes";
@@ -19,6 +19,11 @@ export function App() {
   const [mesKey, setMesKey] = useState(mesAtual());
   const [aba, setAba] = useState<Aba>("mes");
   const { dados } = orc;
+
+  // Ao chegar num mês que ainda não existe, cria sozinho (copiando o mês anterior).
+  useEffect(() => {
+    if (dados) orc.criarMesAutomatico(mesKey);
+  }, [dados, mesKey, orc]);
 
   return (
     <div className="app">

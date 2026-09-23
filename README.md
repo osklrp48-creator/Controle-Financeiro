@@ -72,6 +72,9 @@ As escritas recebem só a chave; a implementação lê o valor atual do estado p
 - **Novo mês:** copia rendas e itens do mês cadastrado mais recente anterior a ele. Só itens
   marcados como **fixos** (↻) levam o valor; os demais começam sem valor. Se não houver mês anterior,
   começa com os itens sugeridos e uma renda "Salário".
+- **Criação automática:** ao abrir o app ou navegar para um mês que ainda não existe, ele é criado
+  sozinho quando já há um mês anterior cadastrado (ou, no primeiro uso, quando é o mês atual).
+  Meses antes do primeiro cadastrado e meses excluídos na sessão continuam com o botão "Criar".
 
 ## Backup
 
