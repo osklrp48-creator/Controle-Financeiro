@@ -177,7 +177,7 @@ export function mesAnteriorExistente(meses: Dados["meses"], mesKey: string): str
  * para que navegar para trás não encha o histórico de meses vazios.
  */
 export function deveCriarAutomaticamente(meses: Dados["meses"], mesKey: string, atual: string): boolean {
-  if (meses[mesKey]) return false;
+  if (meses[mesKey] || !dentroDaRetencao(mesKey, atual)) return false;
   if (mesAnteriorExistente(meses, mesKey)) return true;
   return Object.keys(meses).length === 0 && mesKey === atual;
 }
@@ -185,6 +185,35 @@ export function deveCriarAutomaticamente(meses: Dados["meses"], mesKey: string, 
 export function criarMes(dados: Dados, mesKey: string, novoId: GeradorId): Mes {
   const base = mesAnteriorExistente(dados.meses, mesKey);
   return base ? mesAPartirDe(dados.meses[base], novoId) : mesVazio(novoId);
+}
+
+/* ---------- retenção: só os últimos 13 meses ficam guardados ---------- */
+
+export const MESES_GUARDADOS = 13;
+
+/** Mês mais antigo que ainda fica guardado: o atual e os 12 anteriores (meses futuros também ficam). */
+export const primeiroMesGuardado = (atual: string): string => somarMeses(atual, -(MESES_GUARDADOS - 1));
+
+export const dentroDaRetencao = (mesKey: string, atual: string): boolean => mesKey >= primeiroMesGuardado(atual);
+
+/**
+ * Remove meses mais antigos que o período guardado e parcelamentos já quitados antes desse período.
+ * Devolve os dados limpos e o que foi removido (para apagar do armazenamento).
+ */
+export function aplicarRetencao(dados: Dados, atual: string): { dados: Dados; mesesRemovidos: string[]; parcelasRemovidas: number } {
+  const limite = primeiroMesGuardado(atual);
+  const mesesRemovidos = Object.keys(dados.meses).filter((k) => k < limite).sort();
+  const parcelas = dados.parcelas.filter((p) => ultimoMesParcela(p) >= limite);
+  if (!mesesRemovidos.length && parcelas.length === dados.parcelas.length) {
+    return { dados, mesesRemovidos, parcelasRemovidas: 0 };
+  }
+  const meses = { ...dados.meses };
+  for (const k of mesesRemovidos) delete meses[k];
+  return {
+    dados: { ...dados, meses, parcelas },
+    mesesRemovidos,
+    parcelasRemovidas: dados.parcelas.length - parcelas.length,
+  };
 }
 
 /* ---------- evolução ---------- */

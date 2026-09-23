@@ -1,25 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { criarMes as gerarMes, deveCriarAutomaticamente } from "./domain/calculos";
+import { aplicarRetencao, criarMes as gerarMes, deveCriarAutomaticamente } from "./domain/calculos";
 import { mesAtual } from "./domain/meses";
 import type { Config, Dados, Mes, Parcelamento } from "./domain/types";
 import { novoId } from "./formato";
+import { storeDaConta } from "./storage/contas";
 import { createIdbStorage } from "./storage/idbStorage";
 import type { Storage } from "./storage/Storage";
 
-export function useOrcamento() {
+/** Estado e persistência dos dados de uma conta. */
+export function useOrcamento(contaId: string) {
   const ref = useRef<Dados | null>(null);
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const storage = useMemo(() => createIdbStorage(() => ref.current!), []);
+  const storage = useMemo(() => createIdbStorage(() => ref.current!, storeDaConta(contaId)), [contaId]);
   /** Meses excluídos nesta sessão: não são recriados automaticamente ao continuar na tela. */
   const excluidos = useRef(new Set<string>());
 
   useEffect(() => {
     storage
       .load()
-      .then((d) => {
+      .then(async (carregados) => {
+        // Meses fora dos últimos 13 (e parcelamentos quitados antes disso) são apagados.
+        const { dados: d, mesesRemovidos, parcelasRemovidas } = aplicarRetencao(carregados, mesAtual());
         ref.current = d;
         setDados(d);
+        await Promise.all(mesesRemovidos.map((k) => storage.deleteMonth(k)));
+        if (parcelasRemovidas) await storage.saveParcelas();
       })
       .catch((e) => setErro(`Não foi possível abrir os dados: ${e}`));
   }, [storage]);
@@ -78,7 +84,8 @@ export function useOrcamento() {
     },
 
     /** Substitui tudo (restauração de backup). */
-    async importar(novo: Dados) {
+    async importar(backup: Dados) {
+      const novo = aplicarRetencao(backup, mesAtual()).dados;
       const antigos = Object.keys(atual().meses);
       commit(novo, async (s) => {
         await Promise.all(antigos.filter((k) => !(k in novo.meses)).map((k) => s.deleteMonth(k)));

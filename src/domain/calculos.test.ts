@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { configPadrao, CAT_KEYS } from "./categorias";
 import {
+  aplicarRetencao,
   criarMes,
   deveCriarAutomaticamente,
+  primeiroMesGuardado,
   evolucao,
   mesAPartirDe,
   mesVazio,
@@ -219,6 +221,43 @@ describe("criação automática de mês", () => {
     expect(deveCriarAutomaticamente({}, "2026-09", "2026-09")).toBe(true);
     expect(deveCriarAutomaticamente({}, "2026-10", "2026-09")).toBe(false);
     expect(deveCriarAutomaticamente({}, "2026-08", "2026-09")).toBe(false);
+  });
+});
+
+describe("retenção de 13 meses", () => {
+  const m = () => mesCom([]);
+
+  it("guarda o mês atual e os 12 anteriores", () => {
+    expect(primeiroMesGuardado("2026-09")).toBe("2025-09");
+    expect(primeiroMesGuardado("2026-01")).toBe("2025-01");
+  });
+
+  it("remove meses mais antigos e mantém os recentes e futuros", () => {
+    const dados: Dados = {
+      config: configPadrao(),
+      parcelas: [],
+      meses: { "2025-07": m(), "2025-08": m(), "2025-09": m(), "2026-09": m(), "2026-12": m() },
+    };
+    const r = aplicarRetencao(dados, "2026-09");
+    expect(r.mesesRemovidos).toEqual(["2025-07", "2025-08"]);
+    expect(Object.keys(r.dados.meses).sort()).toEqual(["2025-09", "2026-09", "2026-12"]);
+  });
+
+  it("remove só parcelamentos quitados antes do período", () => {
+    const quitado = novoParcelamento({ nome: "A", cat: "nao", inicio: "2025-01", n: 3, valor: 10 }, "a");
+    const ativo = novoParcelamento({ nome: "B", cat: "nao", inicio: "2025-01", n: 24, valor: 10 }, "b");
+    const r = aplicarRetencao({ config: configPadrao(), meses: {}, parcelas: [quitado, ativo] }, "2026-09");
+    expect(r.dados.parcelas).toEqual([ativo]);
+    expect(r.parcelasRemovidas).toBe(1);
+  });
+
+  it("não mexe em nada quando está tudo dentro do período", () => {
+    const dados: Dados = { config: configPadrao(), parcelas: [], meses: { "2026-09": m() } };
+    expect(aplicarRetencao(dados, "2026-09").dados).toBe(dados);
+  });
+
+  it("não cria automaticamente meses fora do período", () => {
+    expect(deveCriarAutomaticamente({ "2024-01": m() }, "2024-02", "2026-09")).toBe(false);
   });
 });
 
