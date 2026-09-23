@@ -4,6 +4,8 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // No GitHub Pages o app fica em /<repo>/; localmente, na raiz.
+  base: process.env.BASE_PATH ?? "/",
   plugins: [
     react(),
     VitePWA({

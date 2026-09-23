@@ -12,6 +12,14 @@ npm run build      # typecheck + build de produção em dist/ (com service worke
 npm run preview    # serve o build (o PWA/offline só funciona no build)
 ```
 
+## Publicação
+
+- **CI** (`.github/workflows/ci.yml`): testes e build em todo PR e push na `main`.
+- **GitHub Pages** (`.github/workflows/deploy.yml`): cada push na `main` publica o app em
+  `https://<usuário>.github.io/<repositório>/`. No celular, abra o endereço e use
+  "Adicionar à tela inicial" / "Instalar app". Se a publicação falhar na primeira vez, ative
+  em Settings → Pages → Source: **GitHub Actions** e rode o workflow de novo.
+
 ## Estrutura
 
 ```
