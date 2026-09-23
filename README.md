@@ -66,6 +66,9 @@ As escritas recebem só a chave; a implementação lê o valor atual do estado p
 - **Gastos / Reservas:** soma do realizado das categorias de cada tipo (o tipo vem da configuração).
 - **Sem destino (saldo):** renda − gastos − reservas. Negativo = lançamentos acima da renda.
 - **Configuração:** os percentuais precisam somar exatamente 100% para serem salvos.
+- **Percentuais por mês:** em Ajustes fica o padrão de todos os meses. Na aba Mês, "Personalizar"
+  define percentuais só para aquele mês (também precisam somar 100%); "Voltar ao padrão" desfaz.
+  Um mês novo sempre começa usando o padrão, mesmo que o anterior fosse personalizado.
 - **Parcelamentos:** a parcela *k* cai no mês `inicio + (k − 1)`, para *k* de 1 a *n*, e entra
   como valor da parcela no realizado da categoria. Total = parcela × n. Se o usuário informar o
   total, a parcela é total ÷ n, arredondada ao centavo.

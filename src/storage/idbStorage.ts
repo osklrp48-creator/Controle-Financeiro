@@ -20,7 +20,7 @@ function normalizarConfig(c: Partial<Config> | undefined): Config {
 function normalizarMes(m: Mes): Mes {
   const cats = { ...m.cats };
   for (const k of CAT_KEYS) cats[k] ??= [];
-  return { rendas: m.rendas ?? [], cats };
+  return { rendas: m.rendas ?? [], cats, ...(m.pcts ? { pcts: m.pcts } : {}) };
 }
 
 export function createIdbStorage(snapshot: Snapshot, store?: UseStore): Storage {

@@ -143,10 +143,10 @@ export function TelaAjustes({ dados, mesKey, orc, contaAcoes }: Props) {
       <SecaoConta {...contaAcoes} />
       <section className="cartao">
         <header>
-          <h2>Distribuição da renda</h2>
+          <h2>Distribuição padrão da renda</h2>
           <strong className={valido ? undefined : "ruim"}>{pct(soma)}</strong>
         </header>
-        <p className="nota">Cada categoria recebe um percentual da renda do mês. Os percentuais precisam somar 100%.</p>
+        <p className="nota">Cada categoria recebe um percentual da renda do mês. Os percentuais precisam somar 100%. Este é o padrão de todos os meses; para mudar só um mês, use "Personalizar" na aba Mês.</p>
         <ul className="config">
           {CATEGORIAS.map((c) => (
             <li key={c.key}>

@@ -877,3 +877,39 @@ button,
   margin: 0;
   color: var(--texto-2);
 }
+
+/* ---------- distribuição do mês ---------- */
+
+.chips-pct {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+.chips-pct li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chips-pct i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.chips-pct b {
+  color: var(--texto);
+}
+.chips-pct b.diferente {
+  color: var(--primaria);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.config .padrao {
+  display: block;
+  color: var(--texto-3);
+  font-size: 12px;
+}
