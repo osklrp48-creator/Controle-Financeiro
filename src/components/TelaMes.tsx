@@ -3,6 +3,7 @@ import type { Dados, Mes } from "../domain/types";
 import { nomeMes } from "../domain/meses";
 import { brl, pct } from "../formato";
 import type { Orcamento } from "../useOrcamento";
+import { DistribuicaoMes } from "./DistribuicaoMes";
 import { ListaItens } from "./ListaItens";
 
 export function Barra({ c }: { c: ResumoCategoria }) {
@@ -69,6 +70,17 @@ export function TelaMes({ mesKey, dados, orc }: { mesKey: string; dados: Dados; 
         </div>
       </section>
       {r.pendentes > 0 && <p className="aviso">{r.pendentes} {r.pendentes === 1 ? "item ainda sem valor" : "itens ainda sem valor"}.</p>}
+
+      <DistribuicaoMes
+        mes={mes}
+        config={dados.config}
+        onSalvar={(pcts) =>
+          alterar((m) => {
+            const { pcts: _, ...resto } = m;
+            return pcts ? { ...resto, pcts } : resto;
+          })
+        }
+      />
 
       <section className="cartao">
         <header>

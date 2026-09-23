@@ -18,10 +18,15 @@ export const arred = (v: number): number => reais(centavos(v));
 
 /* ---------- configuração ---------- */
 
-export const somaPcts = (config: Config): number => arred(somar(CAT_KEYS.map((k) => config.pcts[k])));
+export const somaDosPcts = (pcts: Config["pcts"]): number => arred(somar(CAT_KEYS.map((k) => pcts[k])));
+export const somaPcts = (config: Config): number => somaDosPcts(config.pcts);
 
 /** A distribuição só é válida quando os percentuais fecham exatamente 100%. */
-export const pctsValidos = (config: Config): boolean => somaPcts(config) === 100;
+export const pctsFecham = (pcts: Config["pcts"]): boolean => somaDosPcts(pcts) === 100;
+export const pctsValidos = (config: Config): boolean => pctsFecham(config.pcts);
+
+/** Percentuais em vigor no mês: os próprios do mês, se houver, senão os padrão. */
+export const pctsDoMes = (mes: Mes, config: Config): Config["pcts"] => mes.pcts ?? config.pcts;
 
 /* ---------- parcelamentos ---------- */
 
@@ -88,6 +93,8 @@ export type ResumoCategoria = {
 
 export type ResumoMes = {
   renda: number;
+  /** O mês usa percentuais próprios em vez dos padrão. */
+  pctsProprios: boolean;
   cats: ResumoCategoria[];
   gastos: number;
   reservas: number;
@@ -100,8 +107,9 @@ export type ResumoMes = {
 
 export function resumoMes(mes: Mes, mesKey: string, config: Config, parcelas: Parcelamento[]): ResumoMes {
   const renda = somaItens(mes.rendas);
+  const pcts = pctsDoMes(mes, config);
   const cats: ResumoCategoria[] = CATEGORIAS.map(({ key, nome }) => {
-    const pct = config.pcts[key];
+    const pct = pcts[key];
     const tipo = config.tipos[key];
     const orcado = arred((renda * pct) / 100);
     const itens = somaItens(mes.cats[key]);
@@ -126,6 +134,7 @@ export function resumoMes(mes: Mes, mesKey: string, config: Config, parcelas: Pa
   const reservas = somar(cats.filter((c) => c.tipo === "RESERVA").map((c) => c.realizado));
   return {
     renda,
+    pctsProprios: mes.pcts != null,
     cats,
     gastos,
     reservas,
@@ -150,6 +159,7 @@ export function mesVazio(novoId: GeradorId): Mes {
 /**
  * Novo mês a partir de um mês anterior: mantém os mesmos itens (e rendas);
  * itens marcados como fixos levam o valor junto, os demais começam sem valor.
+ * Percentuais próprios do mês anterior não são copiados: o novo mês usa o padrão.
  */
 export function mesAPartirDe(base: Mes, novoId: GeradorId): Mes {
   const copiar = (i: Item): Item => ({

@@ -11,7 +11,9 @@ import {
   novoParcelamento,
   numeroParcela,
   parcelasDoMes,
+  pctsFecham,
   pctsValidos,
+  somaDosPcts,
   resumoMes,
   saldoDevedor,
   somaPcts,
@@ -159,6 +161,40 @@ describe("resumo do mês", () => {
     expect(basicas.estourado).toBe(true);
     expect(r.saldo).toBe(-50);
     expect(r.pendentes).toBe(1);
+  });
+});
+
+describe("percentuais por mês", () => {
+  it("usa os percentuais próprios do mês no lugar dos padrão", () => {
+    const mes = mesCom([10000], { basicas: [4000], metas: [3000] });
+    mes.pcts = { basicas: 40, nao: 10, prof: 5, metas: 30, reserva: 15 };
+    const r = resumoMes(mes, "2026-09", configPadrao(), []);
+    expect(r.pctsProprios).toBe(true);
+    expect(r.cats.find((c) => c.key === "basicas")).toMatchObject({ pct: 40, orcado: 4000, disponivel: 0 });
+    expect(r.cats.find((c) => c.key === "metas")).toMatchObject({ pct: 30, orcado: 3000 });
+    expect(r.orcadoTotal).toBe(10000);
+  });
+
+  it("sem percentuais próprios, segue o padrão (inclusive quando o padrão muda)", () => {
+    const mes = mesCom([1000]);
+    const c = configPadrao();
+    c.pcts.basicas = 60;
+    c.pcts.nao = 0;
+    const r = resumoMes(mes, "2026-09", c, []);
+    expect(r.pctsProprios).toBe(false);
+    expect(r.cats[0].orcado).toBe(600);
+  });
+
+  it("valida a soma dos percentuais do mês", () => {
+    expect(pctsFecham({ basicas: 40, nao: 10, prof: 5, metas: 30, reserva: 15 })).toBe(true);
+    expect(pctsFecham({ basicas: 40, nao: 10, prof: 5, metas: 30, reserva: 10 })).toBe(false);
+    expect(somaDosPcts({ basicas: 40, nao: 10, prof: 5, metas: 30, reserva: 10 })).toBe(95);
+  });
+
+  it("mês novo não copia percentuais próprios do anterior", () => {
+    const base = mesCom([1000]);
+    base.pcts = { basicas: 40, nao: 10, prof: 5, metas: 30, reserva: 15 };
+    expect(mesAPartirDe(base, id).pcts).toBeUndefined();
   });
 });
 

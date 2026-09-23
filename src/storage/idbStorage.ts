@@ -4,9 +4,9 @@ import { mesValido } from "../domain/meses";
 import type { Config, Dados, Mes, Parcelamento } from "../domain/types";
 import type { Snapshot, Storage } from "./Storage";
 
-const PREFIXO_MES = "mes:";
-const K_CONFIG = "config";
-const K_PARCELAS = "parcelas";
+export const PREFIXO_MES = "mes:";
+export const K_CONFIG = "config";
+export const K_PARCELAS = "parcelas";
 
 /** Completa configs antigas/parciais com os valores padrão. */
 function normalizarConfig(c: Partial<Config> | undefined): Config {
@@ -20,7 +20,26 @@ function normalizarConfig(c: Partial<Config> | undefined): Config {
 function normalizarMes(m: Mes): Mes {
   const cats = { ...m.cats };
   for (const k of CAT_KEYS) cats[k] ??= [];
-  return { rendas: m.rendas ?? [], cats };
+  return { rendas: m.rendas ?? [], cats, ...(m.pcts ? { pcts: m.pcts } : {}) };
+}
+
+/**
+ * Monta os dados do app a partir de pares (chave, valor) no formato de armazenamento:
+ * "mes:AAAA-MM", "config" e "parcelas". Usado pelo IndexedDB e pelo Supabase.
+ */
+export function montarDados(pares: Iterable<[string, unknown]>): Dados {
+  const meses: Dados["meses"] = {};
+  let config: Config | undefined;
+  let parcelas: Parcelamento[] = [];
+  for (const [k, v] of pares) {
+    if (k === K_CONFIG) config = v as Config;
+    else if (k === K_PARCELAS) parcelas = v as Parcelamento[];
+    else if (k.startsWith(PREFIXO_MES)) {
+      const key = k.slice(PREFIXO_MES.length);
+      if (mesValido(key)) meses[key] = normalizarMes(v as Mes);
+    }
+  }
+  return { meses, config: normalizarConfig(config), parcelas };
 }
 
 export function createIdbStorage(snapshot: Snapshot, store?: UseStore): Storage {
@@ -28,18 +47,7 @@ export function createIdbStorage(snapshot: Snapshot, store?: UseStore): Storage 
 
   return {
     async load(): Promise<Dados> {
-      const meses: Dados["meses"] = {};
-      let config: Config | undefined;
-      let parcelas: Parcelamento[] = [];
-      for (const [k, v] of await entries<string, unknown>(db)) {
-        if (k === K_CONFIG) config = v as Config;
-        else if (k === K_PARCELAS) parcelas = v as Parcelamento[];
-        else if (k.startsWith(PREFIXO_MES)) {
-          const key = k.slice(PREFIXO_MES.length);
-          if (mesValido(key)) meses[key] = normalizarMes(v as Mes);
-        }
-      }
-      return { meses, config: normalizarConfig(config), parcelas };
+      return montarDados(await entries<string, unknown>(db));
     },
 
     async saveMonth(key) {

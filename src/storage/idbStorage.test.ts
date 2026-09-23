@@ -19,6 +19,7 @@ describe("createIdbStorage", () => {
 
     estado.meses["2026-09"] = mesVazio(id);
     estado.meses["2026-10"] = mesVazio(id);
+    estado.meses["2026-09"].pcts = { basicas: 40, nao: 10, prof: 5, metas: 30, reserva: 15 };
     estado.config.pcts.basicas = 45;
     estado.config.pcts.nao = 15;
     estado.parcelas = [{ id: "p", nome: "TV", cat: "nao", inicio: "2026-09", n: 2, valor: 10, total: 20 }];

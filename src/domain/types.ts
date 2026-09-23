@@ -3,8 +3,11 @@ export type TipoCat = "GASTO" | "RESERVA";
 
 export type Item = { id: string; nome: string; real: number | null; fixa?: boolean };
 
-/** Chave do mês: "AAAA-MM". */
-export type Mes = { rendas: Item[]; cats: Record<CatKey, Item[]> };
+/**
+ * Chave do mês: "AAAA-MM". `pcts`, quando presente, substitui só neste mês
+ * os percentuais padrão da configuração.
+ */
+export type Mes = { rendas: Item[]; cats: Record<CatKey, Item[]>; pcts?: Record<CatKey, number> };
 
 export type Config = { pcts: Record<CatKey, number>; tipos: Record<CatKey, TipoCat> };
 

@@ -5,32 +5,40 @@ import { mesValido, nomeMes } from "../domain/meses";
 import type { Config, Dados, TipoCat } from "../domain/types";
 import { lerValor, pct } from "../formato";
 import type { AcoesConta } from "../App";
+import { nomeDoUsuario } from "../nuvem";
+import { SENHA_MINIMA } from "../validacao";
+import { ImportarLocais } from "./ImportarLocais";
+import { SenhaInput } from "./SenhaInput";
 import type { Orcamento } from "../useOrcamento";
 
 function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesConta) {
   const [modo, setModo] = useState<"nada" | "senha" | "excluir">("nada");
   const [atual, setAtual] = useState("");
   const [nova, setNova] = useState("");
+  const [confirmacao, setConfirmacao] = useState("");
   const [msg, setMsg] = useState<{ texto: string; ok: boolean } | null>(null);
 
   const trocar = (m: typeof modo) => {
     setModo(m);
     setAtual("");
     setNova("");
+    setConfirmacao("");
     setMsg(null);
   };
 
   const salvarSenha = async (e: React.FormEvent) => {
     e.preventDefault();
-    const erro = await onAlterarSenha(atual, nova || undefined);
+    if (nova.length < SENHA_MINIMA) return setMsg({ texto: `A nova senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`, ok: false });
+    if (nova !== confirmacao) return setMsg({ texto: "A confirmação não confere com a nova senha.", ok: false });
+    const erro = await onAlterarSenha(atual, nova);
     if (erro) return setMsg({ texto: erro, ok: false });
     trocar("nada");
-    setMsg({ texto: nova ? "Senha alterada." : "Senha removida.", ok: true });
+    setMsg({ texto: "Senha alterada.", ok: true });
   };
 
   const excluir = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!confirm(`Excluir a conta "${conta.nome}" e TODOS os dados dela? Isso não pode ser desfeito.`)) return;
+    if (!confirm(`Excluir a conta de ${nomeDoUsuario(conta)} e TODOS os dados dela? Isso não pode ser desfeito.`)) return;
     const erro = await onExcluirConta(atual);
     if (erro) setMsg({ texto: erro, ok: false });
   };
@@ -39,14 +47,15 @@ function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesCont
     <section className="cartao">
       <header>
         <h2>
-          Conta <small>{conta.nome}</small>
+          Conta <small>{nomeDoUsuario(conta)}</small>
+          <small>{conta.email}</small>
         </h2>
-        <button onClick={onSair}>Trocar de conta</button>
+        <button onClick={onSair}>Sair</button>
       </header>
       {msg && <p className={`situacao ${msg.ok ? "ok" : "ruim"}`}>{msg.texto}</p>}
       {modo === "nada" && (
         <div className="acoes">
-          <button onClick={() => trocar("senha")}>{conta.senha ? "Alterar senha" : "Definir senha"}</button>
+          <button onClick={() => trocar("senha")}>Alterar senha</button>
           <button className="perigo" onClick={() => trocar("excluir")}>
             Excluir conta
           </button>
@@ -54,21 +63,14 @@ function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesCont
       )}
       {modo === "senha" && (
         <form className="formulario" onSubmit={salvarSenha}>
-          {conta.senha && (
-            <label>
-              Senha atual
-              <input type="password" value={atual} onChange={(e) => setAtual(e.target.value)} autoComplete="current-password" />
-            </label>
-          )}
-          <label>
-            Nova senha {conta.senha && "(deixe em branco para remover)"}
-            <input type="password" value={nova} onChange={(e) => setNova(e.target.value)} autoComplete="new-password" />
-          </label>
+          <SenhaInput rotulo="Senha atual" valor={atual} onChange={setAtual} autoComplete="current-password" />
+          <SenhaInput rotulo="Nova senha" valor={nova} onChange={setNova} autoComplete="new-password" />
+          <SenhaInput rotulo="Confirmação da nova senha" valor={confirmacao} onChange={setConfirmacao} autoComplete="new-password" />
           <div className="acoes">
             <button type="button" onClick={() => trocar("nada")}>
               Cancelar
             </button>
-            <button className="primario" disabled={!conta.senha && !nova}>
+            <button className="primario" disabled={!atual || !nova}>
               Salvar senha
             </button>
           </div>
@@ -76,18 +78,15 @@ function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesCont
       )}
       {modo === "excluir" && (
         <form className="formulario" onSubmit={excluir}>
-          <p className="nota">Apaga a conta e todos os meses, parcelamentos e ajustes dela neste aparelho.</p>
-          {conta.senha && (
-            <label>
-              Senha da conta
-              <input type="password" value={atual} onChange={(e) => setAtual(e.target.value)} autoComplete="current-password" />
-            </label>
-          )}
+          <p className="nota">Apaga a conta e todos os meses, parcelamentos e ajustes dela, na nuvem e neste aparelho.</p>
+          <SenhaInput rotulo="Senha da conta" valor={atual} onChange={setAtual} autoComplete="current-password" />
           <div className="acoes">
             <button type="button" onClick={() => trocar("nada")}>
               Cancelar
             </button>
-            <button className="perigo">Excluir conta</button>
+            <button className="perigo" disabled={!atual}>
+              Excluir conta
+            </button>
           </div>
         </form>
       )}
@@ -146,12 +145,13 @@ export function TelaAjustes({ dados, mesKey, orc, contaAcoes }: Props) {
   return (
     <>
       <SecaoConta {...contaAcoes} />
+      <ImportarLocais orc={orc} usuarioId={contaAcoes.conta.id} sempre />
       <section className="cartao">
         <header>
-          <h2>Distribuição da renda</h2>
+          <h2>Distribuição padrão da renda</h2>
           <strong className={valido ? undefined : "ruim"}>{pct(soma)}</strong>
         </header>
-        <p className="nota">Cada categoria recebe um percentual da renda do mês. Os percentuais precisam somar 100%.</p>
+        <p className="nota">Cada categoria recebe um percentual da renda do mês. Os percentuais precisam somar 100%. Este é o padrão de todos os meses; para mudar só um mês, use "Personalizar" na aba Mês.</p>
         <ul className="config">
           {CATEGORIAS.map((c) => (
             <li key={c.key}>
@@ -208,7 +208,7 @@ export function TelaAjustes({ dados, mesKey, orc, contaAcoes }: Props) {
         <header>
           <h2>Backup</h2>
         </header>
-        <p className="nota">Os dados desta conta ficam só neste aparelho, e só os últimos 13 meses são guardados. Exporte um backup de vez em quando.</p>
+        <p className="nota">Os dados ficam salvos na sua conta (na nuvem) e também neste aparelho, para funcionar sem internet. Só os últimos 13 meses são guardados; para manter o histórico completo, exporte um backup.</p>
         <div className="acoes">
           <button onClick={exportar}>Exportar JSON</button>
           <label className="botao">

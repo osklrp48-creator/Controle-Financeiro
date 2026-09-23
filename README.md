@@ -32,6 +32,9 @@ src/
   storage/
     Storage.ts     interface de persistência (trocável por backend)
     idbStorage.ts  implementação em IndexedDB via idb-keyval
+    syncStorage.ts IndexedDB + nuvem, com fila de pendências offline
+    contas.ts      contas locais antigas (só para importar dados)
+  nuvem.ts         cliente Supabase, sessão e erros traduzidos
   useOrcamento.ts  estado do app + chamadas ao Storage
   components/      telas: Mês, Painel, Parcelas, Ajustes
 ```
@@ -66,6 +69,9 @@ As escritas recebem só a chave; a implementação lê o valor atual do estado p
 - **Gastos / Reservas:** soma do realizado das categorias de cada tipo (o tipo vem da configuração).
 - **Sem destino (saldo):** renda − gastos − reservas. Negativo = lançamentos acima da renda.
 - **Configuração:** os percentuais precisam somar exatamente 100% para serem salvos.
+- **Percentuais por mês:** em Ajustes fica o padrão de todos os meses. Na aba Mês, "Personalizar"
+  define percentuais só para aquele mês (também precisam somar 100%); "Voltar ao padrão" desfaz.
+  Um mês novo sempre começa usando o padrão, mesmo que o anterior fosse personalizado.
 - **Parcelamentos:** a parcela *k* cai no mês `inicio + (k − 1)`, para *k* de 1 a *n*, e entra
   como valor da parcela no realizado da categoria. Total = parcela × n. Se o usuário informar o
   total, a parcela é total ÷ n, arredondada ao centavo.
@@ -76,14 +82,33 @@ As escritas recebem só a chave; a implementação lê o valor atual do estado p
   sozinho quando já há um mês anterior cadastrado (ou, no primeiro uso, quando é o mês atual).
   Meses antes do primeiro cadastrado e meses excluídos na sessão continuam com o botão "Criar".
 
-## Contas
+## Contas (Supabase)
 
-- O app abre numa tela para escolher ou criar uma **conta**. Cada conta tem seus próprios meses,
-  parcelamentos e ajustes, guardados num banco IndexedDB separado (`orcamento-<id>`).
-- A senha é opcional e fica guardada como hash PBKDF2. Ela só controla o acesso pelo app: os dados
-  **não** são criptografados no navegador e ficam apenas no aparelho, sem sincronizar entre aparelhos.
-- A conta aberta fica lembrada no aparelho até tocar em **Trocar de conta** (em Ajustes).
-- Os dados de antes das contas viram automaticamente a conta **Minha conta**.
+O login e os dados ficam no [Supabase](https://supabase.com) (projeto configurado em `src/nuvem.ts`;
+pode ser trocado pelas variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`).
+
+- **Cadastro:** nome, sobrenome, e-mail, senha e confirmação (mínimo de 6 caracteres).
+- **Login:** e-mail e senha. **Esqueci minha senha** envia um link por e-mail que abre o app na
+  tela "Criar senha nova".
+- Todos os campos de senha têm botão para **mostrar/ocultar**.
+- **Ajustes:** sair, alterar senha (pede a atual) e excluir a conta (apaga a conta e todos os dados).
+- **Sincronização:** os dados de cada usuário ficam na tabela `documentos` (um documento por mês,
+  mais `config` e `parcelas`) e numa cópia no aparelho (IndexedDB). Sem internet, o app continua
+  funcionando; as alterações ficam pendentes e são enviadas quando a conexão volta
+  (`src/storage/syncStorage.ts`). Ao abrir com internet, vale o que está na nuvem.
+- **Dados antigos:** lançamentos salvos no aparelho por versões anteriores (antes do login online)
+  aparecem no card **Dados salvos neste aparelho**, com a opção de trazê-los para a conta.
+
+### Configuração do projeto Supabase
+
+1. Rode `supabase/schema.sql` no **SQL Editor** (cria a tabela, as regras de acesso e a função de
+   excluir conta).
+2. Em **Authentication → URL Configuration**, use o endereço do app
+   (`https://<usuário>.github.io/<repositório>/`) como **Site URL** e em **Redirect URLs**, para que
+   os links de confirmação e de nova senha abram o app.
+3. Por padrão o Supabase pede **confirmação de e-mail** no cadastro; o app avisa a pessoa para
+   confirmar antes de entrar. O envio de e-mails do plano gratuito tem limite de poucos e-mails
+   por hora; para uso maior, configure um SMTP próprio em **Authentication → Emails**.
 
 ## Retenção de 13 meses
 

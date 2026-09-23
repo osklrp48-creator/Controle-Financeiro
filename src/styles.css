@@ -823,3 +823,107 @@ button,
   border-radius: 10px;
   padding: 9px 10px;
 }
+
+.campo-senha {
+  position: relative;
+  display: flex;
+}
+.campo-senha input {
+  flex: 1;
+  padding-right: 44px !important;
+}
+.ver-senha {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto-2);
+  display: grid;
+  place-items: center;
+}
+.ver-senha svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ver-senha[aria-pressed="true"] {
+  color: var(--primaria);
+}
+.alternativa {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--texto-2);
+}
+.alternativa .link {
+  font-size: 14px;
+}
+.aviso-antigo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+.aviso-antigo p {
+  margin: 0;
+  color: var(--texto-2);
+}
+
+/* ---------- distribuição do mês ---------- */
+
+.chips-pct {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+.chips-pct li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chips-pct i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.chips-pct b {
+  color: var(--texto);
+}
+.chips-pct b.diferente {
+  color: var(--primaria);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.config .padrao {
+  display: block;
+  color: var(--texto-3);
+  font-size: 12px;
+}
+
+.cartao h2 small + small {
+  margin-top: 0;
+}
+.importar-locais .formulario {
+  margin-top: 8px;
+}
+.topo .offline {
+  font-size: 11px;
+  background: rgb(255 255 255 / 0.18);
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 6px;
+}
