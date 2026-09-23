@@ -1,90 +1,85 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { App } from "./App";
-import { TelaEntrada } from "./components/TelaEntrada";
-import { novoId } from "./formato";
-import { contaDaSessao, criarRepositorioContas, salvarSessao, type Conta } from "./storage/contas";
+import { NovaSenha, TelaEntrada, type AcoesEntrada } from "./components/TelaEntrada";
+import { cacheDoUsuario, mensagemDeErro, supabase, urlDoApp, usuarioDe, type Usuario } from "./nuvem";
+import { limparCache } from "./storage/syncStorage";
 
-const mensagem = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
-/** Página de login/cadastro; com uma conta aberta, mostra o app com os dados dela. */
+/** Login/cadastro pelo Supabase; com um usuário logado, mostra o app com os dados dele. */
 export function Raiz() {
-  const repo = useMemo(() => criarRepositorioContas(), []);
-  const [contas, setContas] = useState<Conta[] | null>(null);
-  const [ativa, setAtiva] = useState<Conta | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
+  const [recuperando, setRecuperando] = useState(false);
+  const [aviso, setAviso] = useState<string | undefined>();
 
   useEffect(() => {
-    repo
-      .listar()
-      .then((lista) => {
-        setContas(lista);
-        // Só reabre sozinha uma conta com cadastro completo (com senha).
-        const sessao = lista.find((c) => c.id === contaDaSessao() && c.senha);
-        setAtiva(sessao ?? null);
-      })
-      .catch((e) => setErro(`Não foi possível abrir as contas: ${e}`));
-  }, [repo]);
+    supabase.auth.getSession().then(({ data }) => setUsuario(data.session ? usuarioDe(data.session.user) : null));
+    const { data } = supabase.auth.onAuthStateChange((evento, sessao) => {
+      if (evento === "PASSWORD_RECOVERY") setRecuperando(true);
+      setUsuario(sessao ? usuarioDe(sessao.user) : null);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
-  const abrir = (c: Conta | null) => {
-    salvarSessao(c?.id ?? null);
-    setAtiva(c);
+  const acoes: AcoesEntrada = {
+    async onEntrar(email, senha) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+      return error ? mensagemDeErro(error) : null;
+    },
+    async onCadastrar({ nome, sobrenome, email, senha }) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: senha,
+        options: { data: { nome, sobrenome }, emailRedirectTo: urlDoApp() },
+      });
+      if (error) return { erro: mensagemDeErro(error) };
+      // Com confirmação de e-mail ativa, o Supabase devolve um usuário sem identidades se o e-mail já existe.
+      if (data.user && data.user.identities?.length === 0) return { erro: "Já existe uma conta com esse e-mail." };
+      return data.session ? {} : { confirmar: true };
+    },
+    async onEsqueci(email) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: urlDoApp() });
+      return error ? mensagemDeErro(error) : null;
+    },
+    async onNovaSenha(senha) {
+      const { error } = await supabase.auth.updateUser({ password: senha });
+      if (error) return mensagemDeErro(error);
+      setRecuperando(false);
+      return null;
+    },
   };
 
-  if (erro) return <p className="nada">{erro}</p>;
-  if (!contas) return <p className="nada">Carregando…</p>;
+  /** Confere a senha atual entrando de novo com ela. */
+  const conferirSenha = async (u: Usuario, senha: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: u.email, password: senha });
+    return error ? (/invalid login/i.test(error.message) ? "Senha incorreta." : mensagemDeErro(error)) : null;
+  };
 
-  if (!ativa) {
-    return (
-      <TelaEntrada
-        semCadastro={contas.filter((c) => !c.senha)}
-        onEntrar={async (nome, sobrenome, senha) => {
-          try {
-            abrir(await repo.entrar(nome, sobrenome, senha));
-            return null;
-          } catch (e) {
-            return mensagem(e);
-          }
-        }}
-        onCadastrar={async (nome, sobrenome, senha, contaAntiga) => {
-          try {
-            const c = contaAntiga
-              ? await repo.cadastrarExistente(contaAntiga.id, nome, sobrenome, senha)
-              : await repo.cadastrar(nome, sobrenome, senha, novoId());
-            setContas([...contas.filter((x) => x.id !== c.id), c]);
-            abrir(c);
-            return null;
-          } catch (e) {
-            return mensagem(e);
-          }
-        }}
-      />
-    );
-  }
+  if (usuario === undefined) return <p className="nada">Carregando…</p>;
+  if (recuperando) return <NovaSenha onNovaSenha={acoes.onNovaSenha} />;
+  if (!usuario) return <TelaEntrada acoes={acoes} aviso={aviso} />;
 
   return (
     <App
-      key={ativa.id}
-      conta={ativa}
-      onSair={() => abrir(null)}
+      key={usuario.id}
+      conta={usuario}
+      onSair={async () => {
+        setAviso(undefined);
+        await supabase.auth.signOut();
+      }}
       onAlterarSenha={async (atual, nova) => {
-        try {
-          const c = await repo.alterarSenha(ativa.id, atual, nova);
-          setContas(contas.map((x) => (x.id === c.id ? c : x)));
-          setAtiva(c);
-          return null;
-        } catch (e) {
-          return mensagem(e);
-        }
+        const falha = await conferirSenha(usuario, atual);
+        if (falha) return falha;
+        const { error } = await supabase.auth.updateUser({ password: nova });
+        return error ? mensagemDeErro(error) : null;
       }}
       onExcluirConta={async (senha) => {
-        try {
-          await repo.excluir(ativa.id, senha);
-          setContas(contas.filter((x) => x.id !== ativa.id));
-          abrir(null);
-          return null;
-        } catch (e) {
-          return mensagem(e);
-        }
+        const falha = await conferirSenha(usuario, senha);
+        if (falha) return falha;
+        const { error } = await supabase.rpc("excluir_minha_conta");
+        if (error) return mensagemDeErro(error);
+        await limparCache(cacheDoUsuario(usuario.id));
+        setAviso("Conta excluída.");
+        await supabase.auth.signOut();
+        return null;
       }}
     />
   );

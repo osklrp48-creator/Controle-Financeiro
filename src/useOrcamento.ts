@@ -3,16 +3,26 @@ import { aplicarRetencao, criarMes as gerarMes, deveCriarAutomaticamente } from 
 import { mesAtual } from "./domain/meses";
 import type { Config, Dados, Mes, Parcelamento } from "./domain/types";
 import { novoId } from "./formato";
-import { storeDaConta } from "./storage/contas";
-import { createIdbStorage } from "./storage/idbStorage";
+import { cacheDoUsuario, remotoDoUsuario } from "./nuvem";
+import { createSyncStorage } from "./storage/syncStorage";
 import type { Storage } from "./storage/Storage";
 
-/** Estado e persistência dos dados de uma conta. */
-export function useOrcamento(contaId: string) {
+/** Estado e persistência (aparelho + nuvem) dos dados de um usuário. */
+export function useOrcamento(usuarioId: string) {
   const ref = useRef<Dados | null>(null);
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const storage = useMemo(() => createIdbStorage(() => ref.current!, storeDaConta(contaId)), [contaId]);
+  const storage = useMemo(
+    () => createSyncStorage(() => ref.current!, remotoDoUsuario(usuarioId), cacheDoUsuario(usuarioId)),
+    [usuarioId],
+  );
+
+  // Quando a internet volta, envia o que ficou pendente.
+  useEffect(() => {
+    const aoVoltar = () => void storage.sincronizar();
+    window.addEventListener("online", aoVoltar);
+    return () => window.removeEventListener("online", aoVoltar);
+  }, [storage]);
   /** Meses excluídos nesta sessão: não são recriados automaticamente ao continuar na tela. */
   const excluidos = useRef(new Set<string>());
 

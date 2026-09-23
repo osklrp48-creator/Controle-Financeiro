@@ -5,7 +5,9 @@ import { mesValido, nomeMes } from "../domain/meses";
 import type { Config, Dados, TipoCat } from "../domain/types";
 import { lerValor, pct } from "../formato";
 import type { AcoesConta } from "../App";
-import { nomeCompleto } from "../storage/contas";
+import { nomeDoUsuario } from "../nuvem";
+import { SENHA_MINIMA } from "../validacao";
+import { ImportarLocais } from "./ImportarLocais";
 import { SenhaInput } from "./SenhaInput";
 import type { Orcamento } from "../useOrcamento";
 
@@ -26,6 +28,7 @@ function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesCont
 
   const salvarSenha = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (nova.length < SENHA_MINIMA) return setMsg({ texto: `A nova senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`, ok: false });
     if (nova !== confirmacao) return setMsg({ texto: "A confirmação não confere com a nova senha.", ok: false });
     const erro = await onAlterarSenha(atual, nova);
     if (erro) return setMsg({ texto: erro, ok: false });
@@ -35,7 +38,7 @@ function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesCont
 
   const excluir = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!confirm(`Excluir a conta de ${nomeCompleto(conta)} e TODOS os dados dela? Isso não pode ser desfeito.`)) return;
+    if (!confirm(`Excluir a conta de ${nomeDoUsuario(conta)} e TODOS os dados dela? Isso não pode ser desfeito.`)) return;
     const erro = await onExcluirConta(atual);
     if (erro) setMsg({ texto: erro, ok: false });
   };
@@ -44,7 +47,8 @@ function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesCont
     <section className="cartao">
       <header>
         <h2>
-          Conta <small>{nomeCompleto(conta)}</small>
+          Conta <small>{nomeDoUsuario(conta)}</small>
+          <small>{conta.email}</small>
         </h2>
         <button onClick={onSair}>Sair</button>
       </header>
@@ -74,7 +78,7 @@ function SecaoConta({ conta, onSair, onAlterarSenha, onExcluirConta }: AcoesCont
       )}
       {modo === "excluir" && (
         <form className="formulario" onSubmit={excluir}>
-          <p className="nota">Apaga a conta e todos os meses, parcelamentos e ajustes dela neste aparelho.</p>
+          <p className="nota">Apaga a conta e todos os meses, parcelamentos e ajustes dela, na nuvem e neste aparelho.</p>
           <SenhaInput rotulo="Senha da conta" valor={atual} onChange={setAtual} autoComplete="current-password" />
           <div className="acoes">
             <button type="button" onClick={() => trocar("nada")}>
@@ -141,6 +145,7 @@ export function TelaAjustes({ dados, mesKey, orc, contaAcoes }: Props) {
   return (
     <>
       <SecaoConta {...contaAcoes} />
+      <ImportarLocais orc={orc} usuarioId={contaAcoes.conta.id} sempre />
       <section className="cartao">
         <header>
           <h2>Distribuição padrão da renda</h2>
@@ -203,7 +208,7 @@ export function TelaAjustes({ dados, mesKey, orc, contaAcoes }: Props) {
         <header>
           <h2>Backup</h2>
         </header>
-        <p className="nota">Os dados desta conta ficam só neste aparelho, e só os últimos 13 meses são guardados. Exporte um backup de vez em quando.</p>
+        <p className="nota">Os dados ficam salvos na sua conta (na nuvem) e também neste aparelho, para funcionar sem internet. Só os últimos 13 meses são guardados; para manter o histórico completo, exporte um backup.</p>
         <div className="acoes">
           <button onClick={exportar}>Exportar JSON</button>
           <label className="botao">

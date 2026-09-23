@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { ImportarLocais } from "./components/ImportarLocais";
 import { Painel } from "./components/Painel";
 import { TelaAjustes } from "./components/TelaAjustes";
 import { TelaMes } from "./components/TelaMes";
 import { TelaParcelas } from "./components/TelaParcelas";
 import { primeiroMesGuardado } from "./domain/calculos";
 import { mesAtual, nomeMes, somarMeses } from "./domain/meses";
-import { nomeCompleto, type Conta } from "./storage/contas";
+import { nomeDoUsuario, type Usuario } from "./nuvem";
 import { useOrcamento } from "./useOrcamento";
 
 const ABAS = [
@@ -17,8 +18,8 @@ const ABAS = [
 type Aba = (typeof ABAS)[number]["key"];
 
 export type AcoesConta = {
-  conta: Conta;
-  onSair: () => void;
+  conta: Usuario;
+  onSair: () => void | Promise<void>;
   /** Devolvem uma mensagem de erro, ou null se deu certo. */
   onAlterarSenha: (senhaAtual: string, nova: string) => Promise<string | null>;
   onExcluirConta: (senha: string) => Promise<string | null>;
@@ -30,6 +31,16 @@ export function App(props: AcoesConta) {
   const [mesKey, setMesKey] = useState(mesAtual());
   const [aba, setAba] = useState<Aba>("mes");
   const { dados } = orc;
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const atualizar = () => setOnline(navigator.onLine);
+    window.addEventListener("online", atualizar);
+    window.addEventListener("offline", atualizar);
+    return () => {
+      window.removeEventListener("online", atualizar);
+      window.removeEventListener("offline", atualizar);
+    };
+  }, []);
 
   // Ao chegar num mês que ainda não existe, cria sozinho (copiando o mês anterior).
   useEffect(() => {
@@ -42,7 +53,12 @@ export function App(props: AcoesConta) {
         <div className="marca">
           <h1>Orçamento</h1>
           <button className="conta-atual" onClick={() => setAba("ajustes")} title="Conta">
-            {nomeCompleto(conta)}
+            {nomeDoUsuario(conta)}
+            {!online && (
+              <span className="offline" title="As alterações ficam salvas no aparelho e são enviadas quando a internet voltar">
+                sem internet
+              </span>
+            )}
           </button>
         </div>
         <nav className="navegador-mes" aria-label="Mês">
@@ -76,7 +92,10 @@ export function App(props: AcoesConta) {
         {!dados ? (
           <p className="nada">Carregando…</p>
         ) : aba === "mes" ? (
-          <TelaMes mesKey={mesKey} dados={dados} orc={orc} />
+          <>
+            <ImportarLocais orc={orc} usuarioId={conta.id} />
+            <TelaMes mesKey={mesKey} dados={dados} orc={orc} />
+          </>
         ) : aba === "painel" ? (
           <Painel mesKey={mesKey} dados={dados} />
         ) : aba === "parcelas" ? (

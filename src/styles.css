@@ -913,3 +913,17 @@ button,
   color: var(--texto-3);
   font-size: 12px;
 }
+
+.cartao h2 small + small {
+  margin-top: 0;
+}
+.importar-locais .formulario {
+  margin-top: 8px;
+}
+.topo .offline {
+  font-size: 11px;
+  background: rgb(255 255 255 / 0.18);
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 6px;
+}

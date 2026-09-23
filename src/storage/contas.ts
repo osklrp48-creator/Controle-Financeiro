@@ -1,9 +1,10 @@
 import { clear, createStore, get, keys, set, type UseStore } from "idb-keyval";
 
 /**
- * Contas locais: cada conta guarda seus dados num banco IndexedDB próprio,
- * separado das demais. O acesso é por nome + sobrenome + senha. A senha só
- * controla o acesso pelo app; os dados não são criptografados no navegador.
+ * Contas LOCAIS das versões anteriores do app (antes do login pelo Supabase).
+ * Hoje servem só para encontrar dados antigos no aparelho e importá-los para a
+ * conta online (ver `ImportarLocais`). Cada conta local tinha um banco
+ * IndexedDB próprio e, opcionalmente, senha (hash PBKDF2).
  */
 export type Conta = {
   id: string;
