@@ -7,10 +7,31 @@ const URL_PADRAO = "https://lizdscuxsxswwbzkboqx.supabase.co";
 const ANON_PADRAO =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpemRzY3V4c3hzd3diemtib3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxODk0MTksImV4cCI6MjEwNTc2NTQxOX0.ugVZ8pqQERdHubBTVNOfXPz0PsBpRcYlnMtd3zM0OdU";
 
+/**
+ * A sessão fica no sessionStorage: vale enquanto o app/aba está aberto (inclusive ao
+ * recarregar) e some quando ele é fechado, obrigando a entrar de novo.
+ */
+function armazenamentoDaSessao(): Storage | undefined {
+  try {
+    // Remove sessões gravadas por versões anteriores, que ficavam no localStorage.
+    for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token/.test(k)) localStorage.removeItem(k);
+    return sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL || URL_PADRAO,
   import.meta.env.VITE_SUPABASE_ANON_KEY || ANON_PADRAO,
-  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } },
+  {
+    auth: {
+      persistSession: true,
+      storage: armazenamentoDaSessao(),
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  },
 );
 
 /** Endereço do app, para onde os links de e-mail (confirmação, nova senha) voltam. */

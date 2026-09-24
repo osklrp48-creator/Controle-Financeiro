@@ -15,6 +15,8 @@ npm run preview    # serve o build (o PWA/offline só funciona no build)
 ## Publicação
 
 - **CI** (`.github/workflows/ci.yml`): testes e build em todo PR e push na `main`.
+- **Vercel** (endereço principal): https://controlefinanceiro-nu-five.vercel.app/ — publica sozinha
+  a cada push na `main`, com o app na raiz do domínio (sem `BASE_PATH`).
 - **GitHub Pages** (`.github/workflows/deploy.yml`): cada push na `main` publica o app em
   `https://<usuário>.github.io/<repositório>/`. No celular, abra o endereço e use
   "Adicionar à tela inicial" / "Instalar app". Se a publicação falhar na primeira vez, ative
@@ -92,6 +94,8 @@ pode ser trocado pelas variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
   tela "Criar senha nova".
 - Todos os campos de senha têm botão para **mostrar/ocultar**.
 - **Ajustes:** sair, alterar senha (pede a atual) e excluir a conta (apaga a conta e todos os dados).
+- **Sessão só com o app aberto:** a sessão fica no `sessionStorage`. Recarregar a página mantém o
+  login, mas ao fechar o app (ou a aba) a pessoa sai da conta e precisa entrar de novo.
 - **Sincronização:** os dados de cada usuário ficam na tabela `documentos` (um documento por mês,
   mais `config` e `parcelas`) e numa cópia no aparelho (IndexedDB). Sem internet, o app continua
   funcionando; as alterações ficam pendentes e são enviadas quando a conexão volta
@@ -104,7 +108,7 @@ pode ser trocado pelas variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
 1. Rode `supabase/schema.sql` no **SQL Editor** (cria a tabela, as regras de acesso e a função de
    excluir conta).
 2. Em **Authentication → URL Configuration**, use o endereço do app
-   (`https://<usuário>.github.io/<repositório>/`) como **Site URL** e em **Redirect URLs**, para que
+   (hoje `https://controlefinanceiro-nu-five.vercel.app/`) como **Site URL** e em **Redirect URLs**, para que
    os links de confirmação e de nova senha abram o app.
 3. Por padrão o Supabase pede **confirmação de e-mail** no cadastro; o app avisa a pessoa para
    confirmar antes de entrar. O envio de e-mails do plano gratuito tem limite de poucos e-mails
