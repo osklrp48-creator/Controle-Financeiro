@@ -34,6 +34,18 @@ export const supabase = createClient(
   },
 );
 
+/** Esquece a sessão só neste aparelho, sem encerrá-la no servidor (usado para "trancar" com PIN). */
+export function esquecerSessaoLocal(): void {
+  try {
+    for (const k of Object.keys(sessionStorage)) if (/^sb-.*-auth-token/.test(k)) sessionStorage.removeItem(k);
+  } catch {
+    /* nada a limpar */
+  }
+}
+
+/** Avisa o app (useOrcamento) que a sessão com a nuvem voltou e dá para sincronizar. */
+export const EVENTO_SESSAO = "orcamento:sessao";
+
 /** Endereço do app, para onde os links de e-mail (confirmação, nova senha) voltam. */
 export const urlDoApp = () => new URL(import.meta.env.BASE_URL, window.location.origin).href;
 
@@ -50,22 +62,28 @@ export const nomeDoUsuario = (u: Usuario) => [u.nome, u.sobrenome].filter(Boolea
 export const cacheDoUsuario = (id: string) => createStore(`orcamento-u-${id}`, "dados");
 
 export function remotoDoUsuario(userId: string): Remoto {
-  const tabela = () => supabase.from("documentos");
+  // Sem sessão, as regras do banco devolveriam "nenhum documento" em vez de erro, e o app
+  // apagaria a cópia local achando que a nuvem está vazia. Por isso exige sessão antes.
+  const tabela = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user.id !== userId) throw new Error("Sem sessão ativa com a nuvem.");
+    return supabase.from("documentos");
+  };
   return {
     async listar() {
-      const { data, error } = await tabela().select("chave, dados").eq("user_id", userId);
+      const { data, error } = await (await tabela()).select("chave, dados").eq("user_id", userId);
       if (error) throw error;
       return (data ?? []).map((d) => [d.chave as string, d.dados as unknown]);
     },
     async salvar(chave, dados) {
-      const { error } = await tabela().upsert(
+      const { error } = await (await tabela()).upsert(
         { user_id: userId, chave, dados, atualizado_em: new Date().toISOString() },
         { onConflict: "user_id,chave" },
       );
       if (error) throw error;
     },
     async apagar(chave) {
-      const { error } = await tabela().delete().eq("user_id", userId).eq("chave", chave);
+      const { error } = await (await tabela()).delete().eq("user_id", userId).eq("chave", chave);
       if (error) throw error;
     },
   };

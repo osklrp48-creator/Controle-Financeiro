@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ImportarLocais } from "./components/ImportarLocais";
 import { Painel } from "./components/Painel";
+import { SugestaoPin } from "./components/Pin";
 import { TelaAjustes } from "./components/TelaAjustes";
 import { TelaMes } from "./components/TelaMes";
 import { TelaParcelas } from "./components/TelaParcelas";
@@ -20,6 +21,10 @@ type Aba = (typeof ABAS)[number]["key"];
 export type AcoesConta = {
   conta: Usuario;
   onSair: () => void | Promise<void>;
+  /** PIN salvo neste aparelho para esta conta. */
+  pinAtivo: boolean;
+  onCriarPin: (pin: string) => Promise<string | null>;
+  onRemoverPin: () => void;
   /** Devolvem uma mensagem de erro, ou null se deu certo. */
   onAlterarSenha: (senhaAtual: string, nova: string) => Promise<string | null>;
   onExcluirConta: (senha: string) => Promise<string | null>;
@@ -93,6 +98,7 @@ export function App(props: AcoesConta) {
           <p className="nada">Carregando…</p>
         ) : aba === "mes" ? (
           <>
+            {!props.pinAtivo && <SugestaoPin usuarioId={conta.id} onCriar={props.onCriarPin} />}
             <ImportarLocais orc={orc} usuarioId={conta.id} />
             <TelaMes mesKey={mesKey} dados={dados} orc={orc} />
           </>

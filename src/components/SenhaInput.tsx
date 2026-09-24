@@ -6,10 +6,12 @@ type Props = {
   onChange: (v: string) => void;
   autoComplete: "current-password" | "new-password";
   autoFocus?: boolean;
+  /** Só números (PIN): teclado numérico no celular. */
+  numerico?: boolean;
 };
 
 /** Campo de senha com botão para mostrar/ocultar o que foi digitado. */
-export function SenhaInput({ rotulo, valor, onChange, autoComplete, autoFocus }: Props) {
+export function SenhaInput({ rotulo, valor, onChange, autoComplete, autoFocus, numerico }: Props) {
   const [visivel, setVisivel] = useState(false);
   return (
     <label>
@@ -18,7 +20,8 @@ export function SenhaInput({ rotulo, valor, onChange, autoComplete, autoFocus }:
         <input
           type={visivel ? "text" : "password"}
           value={valor}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(numerico ? e.target.value.replace(/\D/g, "").slice(0, 6) : e.target.value)}
+          inputMode={numerico ? "numeric" : undefined}
           autoComplete={autoComplete}
           autoCapitalize="off"
           autoCorrect="off"
