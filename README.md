@@ -37,6 +37,7 @@ src/
     syncStorage.ts IndexedDB + nuvem, com fila de pendências offline
     contas.ts      contas locais antigas (só para importar dados)
   nuvem.ts         cliente Supabase, sessão e erros traduzidos
+  pin.ts           acesso por PIN (token da sessão cifrado no aparelho)
   useOrcamento.ts  estado do app + chamadas ao Storage
   components/      telas: Mês, Painel, Parcelas, Ajustes
 ```
@@ -96,6 +97,13 @@ pode ser trocado pelas variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
 - **Ajustes:** sair, alterar senha (pede a atual) e excluir a conta (apaga a conta e todos os dados).
 - **Sessão só com o app aberto:** a sessão fica no `sessionStorage`. Recarregar a página mantém o
   login, mas ao fechar o app (ou a aba) a pessoa sai da conta e precisa entrar de novo.
+- **Acesso por PIN** (`src/pin.ts`): depois de entrar, a pessoa pode criar um PIN de 4 a 6 números
+  para aquele aparelho (sugestão no topo da aba Mês e em Ajustes). O *refresh token* da sessão é
+  guardado cifrado (AES-GCM, chave derivada do PIN com PBKDF2); ao abrir o app, o PIN o decifra e a
+  sessão é renovada sem e-mail e senha. A cada renovação o token salvo é regravado. Com PIN ativo,
+  **Sair** só tranca o app. Depois de 5 erros seguidos o acesso por PIN é apagado. Sem internet, o
+  PIN abre o app com os dados do aparelho e a sincronização acontece quando a conexão volta.
+  "Sair" sem PIN usa `signOut({ scope: "local" })`, para não derrubar o PIN de outros aparelhos.
 - **Sincronização:** os dados de cada usuário ficam na tabela `documentos` (um documento por mês,
   mais `config` e `parcelas`) e numa cópia no aparelho (IndexedDB). Sem internet, o app continua
   funcionando; as alterações ficam pendentes e são enviadas quando a conexão volta

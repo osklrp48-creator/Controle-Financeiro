@@ -927,3 +927,76 @@ button,
   padding: 1px 6px;
   margin-left: 6px;
 }
+
+/* ---------- PIN ---------- */
+
+.tela-pin {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 24px;
+}
+.tela-pin .ola {
+  margin: 0;
+  color: var(--texto-2);
+}
+.tela-pin h2 {
+  font-size: 20px;
+}
+.pontos {
+  display: flex;
+  gap: 14px;
+  margin: 18px 0 4px;
+}
+.pontos span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--primaria);
+}
+.pontos span.cheio {
+  background: var(--primaria);
+}
+.pontos.errou span {
+  border-color: var(--ruim);
+  animation: tremer 0.3s;
+}
+@keyframes tremer {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.msg-pin {
+  min-height: 1.4em;
+  margin: 4px 0;
+}
+.teclado {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  gap: 14px 22px;
+  margin: 6px 0 12px;
+}
+.teclado button {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  font-size: 26px;
+  font-weight: 500;
+  background: var(--superficie-2);
+  border: 0;
+}
+.teclado button:active {
+  background: var(--borda);
+}
+.teclado .apagar {
+  background: none;
+  font-size: 22px;
+}
+.link.discreto {
+  color: var(--texto-3);
+  font-weight: 500;
+}
+.sugestao-pin {
+  border-color: var(--primaria);
+}

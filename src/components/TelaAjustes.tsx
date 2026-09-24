@@ -8,6 +8,7 @@ import type { AcoesConta } from "../App";
 import { nomeDoUsuario } from "../nuvem";
 import { SENHA_MINIMA } from "../validacao";
 import { ImportarLocais } from "./ImportarLocais";
+import { SecaoPin } from "./Pin";
 import { SenhaInput } from "./SenhaInput";
 import type { Orcamento } from "../useOrcamento";
 
@@ -145,6 +146,7 @@ export function TelaAjustes({ dados, mesKey, orc, contaAcoes }: Props) {
   return (
     <>
       <SecaoConta {...contaAcoes} />
+      <SecaoPin ativo={contaAcoes.pinAtivo} onCriar={contaAcoes.onCriarPin} onRemover={contaAcoes.onRemoverPin} />
       <ImportarLocais orc={orc} usuarioId={contaAcoes.conta.id} sempre />
       <section className="cartao">
         <header>

@@ -3,7 +3,7 @@ import { aplicarRetencao, criarMes as gerarMes, deveCriarAutomaticamente } from 
 import { mesAtual } from "./domain/meses";
 import type { Config, Dados, Mes, Parcelamento } from "./domain/types";
 import { novoId } from "./formato";
-import { cacheDoUsuario, remotoDoUsuario } from "./nuvem";
+import { EVENTO_SESSAO, cacheDoUsuario, remotoDoUsuario } from "./nuvem";
 import { createSyncStorage } from "./storage/syncStorage";
 import type { Storage } from "./storage/Storage";
 
@@ -17,11 +17,15 @@ export function useOrcamento(usuarioId: string) {
     [usuarioId],
   );
 
-  // Quando a internet volta, envia o que ficou pendente.
+  // Quando a internet (ou a sessão) volta, envia o que ficou pendente.
   useEffect(() => {
     const aoVoltar = () => void storage.sincronizar();
     window.addEventListener("online", aoVoltar);
-    return () => window.removeEventListener("online", aoVoltar);
+    window.addEventListener(EVENTO_SESSAO, aoVoltar);
+    return () => {
+      window.removeEventListener("online", aoVoltar);
+      window.removeEventListener(EVENTO_SESSAO, aoVoltar);
+    };
   }, [storage]);
   /** Meses excluídos nesta sessão: não são recriados automaticamente ao continuar na tela. */
   const excluidos = useRef(new Set<string>());
